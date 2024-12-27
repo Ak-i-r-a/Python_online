@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Code Editor with CodeMirror and Brython</title>
+    
+    <!-- CSS Styles for CodeMirror and external resources -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/dracula.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css">
+    
+    <!-- Custom CSS Styles -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            transition: all 0.3s ease;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            font-family: 'Inter', sans-serif;
+            background-color: #121212;
+            color: #ffffff;
+            padding: 2rem;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            background: rgba(30, 30, 30, 0.8);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .editor-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .editor-container {
+            margin-bottom: 1.5rem;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .CodeMirror {
+            height: 300px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+        }
+
+        .button-container {
+            display: flex;
+            gap: 1rem;
+        }
+
+        button {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.25rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: white;
+            background-color: rgba(0,122,204,0.8);
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: rgba(0,122,204,1);
+        }
+
+        #themeToggle {
+            position: fixed;
+            top: 1.5rem;
+            right: 1.5rem;
+        }
+
+        #output {
+            background-color: rgba(40,44,52,0.95);
+            color: #abb2bf;
+            padding: 1rem;
+            border-radius: 12px;
+            margin-top: 20px;
+            min-height: 100px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+    </style>
+    
+    <!-- CodeMirror Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/python/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/edit/closebrackets.min.js"></script>
+    
+    <!-- Brython -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/brython@3.10.5/brython.min.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/brython@3.10.5/brython_stdlib.js"></script>
+</head>
+<body onload="brython()">
+    <button id="themeToggle"><i class="ri-contrast-2-line"></i></button>
+    <div class="container">
+        <div class="editor-header">
+            <h1>Python Code Editor</h1>
+        </div>
+        <div class="editor-container">
+            <textarea id="codeEditor"></textarea>
+        </div>
+        <div class="button-container">
+            <button id="runButton"><i class="ri-play-line"></i>Run Code</button>
+            <button onclick="copyCode()"><i class="ri-file-copy-line"></i>Copy Code</button>
+            <button onclick="copyConsole()"><i class="ri-file-copy-line"></i>Copy Console</button>
+        </div>
+        <h2>Console:</h2>
+        <div id="output"></div>
+    </div>
+
+    <script type="text/python">
+        from browser import document, window
+        import sys
+        import traceback
+
+        class Console:
+            def __init__(self):
+                self.output = document["output"]
+
+            def write(self, text):
+                self.output.text += str(text)
+
+            def flush(self):
+                pass
+
+        def execute_code(event):
+            console = Console()
+            sys.stdout = console
+            sys.stderr = console
+            
+            output = document["output"]
+            code = window.editor.getValue()
+            output.text = ""  # Clear the console
+            
+            try:
+                exec(code)
+            except Exception as e:
+                print(traceback.format_exc())
+
+        document["runButton"].bind("click", execute_code)
+    </script>
+
+    <script>
+        let editor;
+
+        document.addEventListener("DOMContentLoaded", () => {
+            // Initialize CodeMirror
+            window.editor = CodeMirror.fromTextArea(document.getElementById("codeEditor"), {
+                mode: "python",
+                theme: "dracula",
+                lineNumbers: true,
+                autoCloseBrackets: true,
+                matchBrackets: true,
+                indentUnit: 4,
+                tabSize: 4,
+                indentWithTabs: true,
+                extraKeys: { "Tab": "indentMore", "Shift-Tab": "indentLess" }
+            });
+        });
+
+        function copyCode() {
+            const code = window.editor.getValue();
+            console.log("Code to be copied:", code); // Pour déboguer
+            navigator.clipboard.writeText(code).then(() => alert("Code copied to clipboard!"));
+        }
+
+        function copyConsole() {
+            const consoleOutput = document.getElementById("output").innerText;
+            navigator.clipboard.writeText(consoleOutput).then(() => alert("Console output copied to clipboard!"));
+        }
+    </script>
+</body>
+</html>
